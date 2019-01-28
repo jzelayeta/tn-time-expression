@@ -8,17 +8,19 @@ object Utils {
 
   def doesRecurOnFrequency(unit: ChronoUnit)(from: Temporal, to: Temporal, frequency: Int): Boolean = unit.between(from, to) % frequency == 0
 
-  def doesRecurMonthly: (Temporal, Temporal, Int) => Boolean = doesRecurOnFrequency(MONTHS)
+  def doesRecurMonthly = doesRecurOnFrequency(MONTHS) _
 
-  def doesRecurDaily: (Temporal, Temporal, Int) => Boolean = doesRecurOnFrequency(DAYS)
+  def doesRecurDaily = doesRecurOnFrequency(DAYS) _
 
-  def doesRecurYearly: (Temporal, Temporal, Int) => Boolean = doesRecurOnFrequency(YEARS)
+  def doesRecurYearly = doesRecurOnFrequency(YEARS) _
 
   def isDayOfMonth(date: LocalDate, dayOfMonth: Int): Boolean = date.getDayOfMonth == dayOfMonth
 
   def isDayOfWeek(date: LocalDate, dayOfWeek: DayOfWeek): Boolean = date.getDayOfWeek == dayOfWeek
 
   def isMonthOfYear(date: LocalDate, monthOfYear: Int): Boolean = date.getMonthValue == monthOfYear
+
+  def isAt(date: LocalDate, f: LocalDate => Int) = f apply date
 
 }
 
@@ -58,8 +60,8 @@ class MonthlyRecurringOnDayOfMonthTimeExpression(localDate: Temporal, frequency:
   override def isRecurringOn(otherDate: LocalDate): Boolean = doesRecurMonthly(localDate, otherDate, frequency) && isDayOfMonth(otherDate, dayOfMonth)
 }
 
-class MonthlyRecurringOnEventTimeExpression(startingOn: Temporal, frequency: Int, unit: ChronoUnit, dayOfWeek: DayOfWeek, eventOccurrence: Event) extends TimeExpression {
-  override def isRecurringOn(otherDate: LocalDate): Boolean = doesRecurMonthly(startingOn, otherDate, frequency) && isDayOfWeek(otherDate, dayOfWeek) && eventOccurrence.testEvent(otherDate)
+class MonthlyRecurringOnEventTimeExpression(startingOn: Temporal, frequency: Int, unit: ChronoUnit, dayOfWeek: DayOfWeek, event: Event) extends TimeExpression {
+  override def isRecurringOn(otherDate: LocalDate): Boolean = doesRecurMonthly(startingOn, otherDate, frequency) && isDayOfWeek(otherDate, dayOfWeek) && event.testEvent(otherDate)
 }
 
 class YearlyRecurringTimeExpression(fromYear: Int, frequency: Int, day: MonthDay) extends TimeExpression {
