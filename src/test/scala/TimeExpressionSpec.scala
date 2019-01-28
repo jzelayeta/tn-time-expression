@@ -1,4 +1,3 @@
-import java.time.temporal.ChronoUnit
 import java.time.{DayOfWeek, LocalDate, MonthDay, YearMonth}
 
 import org.scalatest.{FlatSpec, Matchers}
@@ -121,7 +120,7 @@ class TimeExpressionSpec extends FlatSpec with Matchers {
     everyMonthTheFirstFridayFromJanuary2012.isRecurringOn(firstFridayOfJanuary2012.plusWeeks(16)) should be(true)
   }
 
-  it should "reccur every year the last friday" in {
+  it should "reccur every year the eight of august" in {
     val oneYear = 1
     val augustTheEight = MonthDay.of(8, 8)
     val everyAugustTheEightFrom2012 = TimeExpression.yearlyEvery(oneYear, augustTheEight, 2012)
@@ -129,6 +128,8 @@ class TimeExpressionSpec extends FlatSpec with Matchers {
     val firstEightOfAugust = LocalDate.of(2012, 8, 8)
     everyAugustTheEightFrom2012.isRecurringOn(firstEightOfAugust) should be(true)
     everyAugustTheEightFrom2012.isRecurringOn(firstEightOfAugust.plusYears(1)) should be(true)
+    everyAugustTheEightFrom2012.isRecurringOn(firstEightOfAugust.plusDays(1)) should be(false)
+    everyAugustTheEightFrom2012.isRecurringOn(firstEightOfAugust.plusMonths(1)) should be(false)
     everyAugustTheEightFrom2012.isRecurringOn(firstEightOfAugust.plusYears(2)) should be(true)
     everyAugustTheEightFrom2012.isRecurringOn(firstEightOfAugust.plusYears(3)) should be(true)
   }

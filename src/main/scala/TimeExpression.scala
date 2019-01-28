@@ -1,6 +1,26 @@
-import java.time.temporal.ChronoUnit.{DAYS, MONTHS, WEEKS, YEARS}
-import java.time.temporal.{ChronoUnit, Temporal, TemporalUnit}
 import java.time._
+import java.time.temporal.ChronoUnit.{DAYS, MONTHS, WEEKS, YEARS}
+import java.time.temporal.{ChronoUnit, Temporal}
+
+import Utils._
+
+object Utils {
+
+  def doesRecurOnFrequency(unit: ChronoUnit)(from: Temporal, to: Temporal, frequency: Int): Boolean = unit.between(from, to) % frequency == 0
+
+  def doesRecurMonthly: (Temporal, Temporal, Int) => Boolean = doesRecurOnFrequency(MONTHS)
+
+  def doesRecurDaily: (Temporal, Temporal, Int) => Boolean = doesRecurOnFrequency(DAYS)
+
+  def doesRecurYearly: (Temporal, Temporal, Int) => Boolean = doesRecurOnFrequency(YEARS)
+
+  def isDayOfMonth(date: LocalDate, dayOfMonth: Int): Boolean = date.getDayOfMonth == dayOfMonth
+
+  def isDayOfWeek(date: LocalDate, dayOfWeek: DayOfWeek): Boolean = date.getDayOfWeek == dayOfWeek
+
+  def isMonthOfYear(date: LocalDate, monthOfYear: Int): Boolean = date.getMonthValue == monthOfYear
+
+}
 
 object TimeExpression {
 
@@ -12,69 +32,52 @@ object TimeExpression {
     */
   def apply(localDate: LocalDate): TimeExpression = new NonRecurringTimeExpression(localDate)
 
-  def daily(every: Int, from: LocalDate): TimeExpression = new DailyRecurringTimeExpression(from, every)
+  def daily(every: Int, localDate: LocalDate): TimeExpression = new DailyRecurringTimeExpression(localDate, every)
 
   def monthlyEvery(every: Int, dayOfMonth: Int, from: YearMonth): TimeExpression = new MonthlyRecurringOnDayOfMonthTimeExpression(from, every, dayOfMonth)
 
-  def monthlyEvery(every: Int, dayOfWeek: DayOfWeek, eventOccurrence: EventOccurrence, from: YearMonth): TimeExpression = new MonthlyRecuringOnEventTimeExpression(from, every, MONTHS, dayOfWeek, eventOccurrence)
+  def monthlyEvery(every: Int, dayOfWeek: DayOfWeek, event: Event, from: YearMonth): TimeExpression = new MonthlyRecurringOnEventTimeExpression(from, every, MONTHS, dayOfWeek, event)
 
-  def yearlyEvery(amountOfYears: Int, day: MonthDay, fromYear: Int): TimeExpression = new YearlyRecurringTimeExpression(amountOfYears, amountOfYears, day)
+  def yearlyEvery(amountOfYears: Int, day: MonthDay, fromYear: Int): TimeExpression = new YearlyRecurringTimeExpression(fromYear, amountOfYears, day)
 
 }
 
-trait FrecuencyCondition {
-  def doesReccurrOnFrecuency(from: Temporal, to: Temporal, frecuency: Int, unit: ChronoUnit): Boolean = unit.between(from, to) % frecuency == 0
-}
-
-abstract class TimeExpression {
+trait TimeExpression {
   def isRecurringOn(otherDate: LocalDate): Boolean
 }
-
-trait DayOfMonthCondition {
-  def isDayOfMonth(date: LocalDate, dayOfMonth: Int): Boolean = date.getDayOfMonth == dayOfMonth
-}
-
-trait DayOfWeekCondition {
-  def isDayOfWeek(date: LocalDate, dayOfWeek: DayOfWeek): Boolean = date.getDayOfWeek == dayOfWeek
-}
-
-trait LastDayOfWeekCondition extends EventOccurrence {
-  def isLastOf(from: LocalDate) = WEEKS.between(from, YearMonth.of(from.getYear, from.getMonth).atEndOfMonth()) == 0
-}
-
 
 class NonRecurringTimeExpression(localDate: LocalDate) extends TimeExpression {
   override def isRecurringOn(otherDate: LocalDate): Boolean = localDate == otherDate
 }
 
-class DailyRecurringTimeExpression(localDate: LocalDate, frecuency: Int) extends TimeExpression with FrecuencyCondition {
-  override def isRecurringOn(otherDate: LocalDate): Boolean = doesReccurrOnFrecuency(localDate, otherDate, frecuency, DAYS)
+class DailyRecurringTimeExpression(localDate: LocalDate, frequency: Int) extends TimeExpression {
+  override def isRecurringOn(otherDate: LocalDate): Boolean = doesRecurDaily(localDate, otherDate, frequency)
 }
 
-class MonthlyRecurringOnDayOfMonthTimeExpression(localDate: Temporal, frecuency: Int, dayOfMonth: Int) extends TimeExpression with FrecuencyCondition with DayOfMonthCondition {
-  override def isRecurringOn(otherDate: LocalDate): Boolean = doesReccurrOnFrecuency(localDate, otherDate, frecuency, MONTHS) && isDayOfMonth(otherDate, dayOfMonth)
+class MonthlyRecurringOnDayOfMonthTimeExpression(localDate: Temporal, frequency: Int, dayOfMonth: Int) extends TimeExpression {
+  override def isRecurringOn(otherDate: LocalDate): Boolean = doesRecurMonthly(localDate, otherDate, frequency) && isDayOfMonth(otherDate, dayOfMonth)
 }
 
-class MonthlyRecuringOnEventTimeExpression(startingOn: Temporal, frecuency: Int, unit: ChronoUnit, dayOfWeek: DayOfWeek, eventOccurrence: EventOccurrence) extends TimeExpression with FrecuencyCondition with DayOfWeekCondition {
-  override def isRecurringOn(otherDate: LocalDate): Boolean = doesReccurrOnFrecuency(startingOn, otherDate, frecuency, MONTHS) && isDayOfWeek(otherDate, dayOfWeek) && eventOccurrence.testEvent(otherDate)
+class MonthlyRecurringOnEventTimeExpression(startingOn: Temporal, frequency: Int, unit: ChronoUnit, dayOfWeek: DayOfWeek, eventOccurrence: Event) extends TimeExpression {
+  override def isRecurringOn(otherDate: LocalDate): Boolean = doesRecurMonthly(startingOn, otherDate, frequency) && isDayOfWeek(otherDate, dayOfWeek) && eventOccurrence.testEvent(otherDate)
 }
 
-class YearlyRecurringTimeExpression(fromYear: Int, frecuency: Int, day: MonthDay) extends TimeExpression with FrecuencyCondition {
-  override def isRecurringOn(otherDate: LocalDate): Boolean = doesReccurrOnFrecuency(Year.of(fromYear),otherDate, frecuency, YEARS)
+class YearlyRecurringTimeExpression(fromYear: Int, frequency: Int, day: MonthDay) extends TimeExpression {
+  override def isRecurringOn(otherDate: LocalDate): Boolean = doesRecurYearly(Year.of(fromYear), otherDate, frequency) && isDayOfMonth(otherDate, day.getDayOfMonth) && isMonthOfYear(otherDate, day.getMonthValue)
 }
 
-trait EventOccurrence {
+trait Event {
   def testEvent(from: LocalDate): Boolean
 }
 
-object FirstDayOfMonth extends EventOccurrence {
+object FirstDayOfMonth extends Event {
   override def testEvent(localDate: LocalDate): Boolean = {
     val startOfMonth = YearMonth.of(localDate.getYear, localDate.getMonth).atDay(1)
     WEEKS.between(startOfMonth, localDate) == 0
   }
 }
 
-object LastDayOfWeek extends EventOccurrence {
+object LastDayOfWeek extends Event {
   override def testEvent(from: LocalDate): Boolean = {
     WEEKS.between(from, YearMonth.of(from.getYear, from.getMonth).atEndOfMonth()) == 0
   }
